@@ -14,17 +14,32 @@
 // Parameters etc.
 #define BUTTON_COUNT 16
 #define NOT_SET -1
-#define EASY_DURATION 700
+#define EASY_DURATION 650
 #define MEDIUM_DURATION 550
-#define HARD_DURATION 400
+#define HARD_DURATION 450
 
 // State Machine:
 enum programState {
   STATE_INIT = 0,
+  STATE_GET_READY,
   STATE_PLAY,
   STATE_RESULTS
 };
 enum programState state;
+
+// Get ready, get set State Machine:
+enum getReadyState {
+  RDY_LT_1 = 1,
+  RDY_1,
+  RDY_LT_2,
+  RDY_2,
+  RDY_LT_3,
+  RDY_3,
+  RDY_LT_4,
+  RDY_4
+};
+enum getReadyState readyState;
+
 
 // Globals:
 
@@ -44,6 +59,10 @@ onenote success_notes[] = {{NOTE_C5, 6}, {NOTE_E5, 12}};
 MelodyPlayer success(SPEAKER_PIN, success_notes);
 onenote miss_notes[] = {{NOTE_A2, 8}};
 MelodyPlayer miss(SPEAKER_PIN, miss_notes);
+onenote low_notes[] = {{NOTE_C4, 3}, {0, 8}};
+MelodyPlayer low(SPEAKER_PIN, low_notes);
+onenote high_notes[] = {{NOTE_C6, 2}, {0, 8}};
+MelodyPlayer high(SPEAKER_PIN, high_notes);
 
 // Functions:
 
@@ -76,10 +95,64 @@ void initNextGame() {
   pointsFor = 0;
   pointsAgainst = 0;
 
-  // Now play the game.
-  state = STATE_PLAY;
+  // Tell the game player to get ready.
+  readyState = RDY_LT_1;
+  state = STATE_GET_READY;
 }
 
+
+/**
+ * getRead handles STATE_GET_READY. Show the user a countdown to game start.
+ */
+void getReady() {
+  switch (readyState) {
+    case RDY_LT_1:
+      low.FromTheTop();
+      low.Play();
+      readyState = RDY_1;
+      break;
+    case RDY_1:
+      low.Update();
+      if (!low.IsPlaying()) {
+        readyState = RDY_LT_2;
+      }
+      break;
+    case RDY_LT_2:
+      low.FromTheTop();
+      low.Play();
+      readyState = RDY_2;
+      break;
+    case RDY_2:
+      low.Update();
+      if (!low.IsPlaying()) {
+        readyState = RDY_LT_3;
+      }
+      break;
+    case RDY_LT_3:
+      low.FromTheTop();
+      low.Play();
+      readyState = RDY_3;
+      break;
+    case RDY_3:
+      low.Update();
+      if (!low.IsPlaying()) {
+        readyState = RDY_LT_4;
+      }
+      break;
+    case RDY_LT_4:
+      high.FromTheTop();
+      high.Play();
+      readyState = RDY_4;
+      break;
+    case RDY_4:
+      high.Update();
+      if (!high.IsPlaying()) {
+        readyState = RDY_LT_1;
+        state = STATE_PLAY;
+      }
+      break;
+  }
+}
 
 /**
  * playGame handles STATE_PLAY. Handle game play events.
@@ -186,6 +259,10 @@ void loop() {
     case STATE_INIT:
       Serial.println("call initNextGame()");
       initNextGame();
+      break;
+
+    case STATE_GET_READY:
+      getReady();
       break;
 
     case STATE_PLAY:
