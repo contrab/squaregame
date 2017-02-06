@@ -16,7 +16,7 @@
 #define NOT_SET -1
 #define EASY_DURATION 650
 #define MEDIUM_DURATION 550
-#define HARD_DURATION 450
+#define HARD_DURATION 400
 
 // State Machine:
 enum programState {
@@ -40,6 +40,14 @@ enum getReadyState {
 };
 enum getReadyState readyState;
 
+// Display Results state machine:
+enum displayResultsState {
+  DISP_INIT = 1,
+  DISP_SHOW,
+  DISP_WAIT
+};
+enum displayResultsState resultsState;
+
 
 // Globals:
 
@@ -53,6 +61,7 @@ unsigned long duration = EASY_DURATION;
 short pointsFor = 0;
 short pointsAgainst = 0;
 unsigned long throttle = 0;
+bool resultsFirstTime = true;
 
 // Sound Effects:
 onenote success_notes[] = {{NOTE_C5, 6}, {NOTE_E5, 12}};
@@ -63,8 +72,24 @@ onenote low_notes[] = {{NOTE_C4, 3}, {0, 8}};
 MelodyPlayer low(SPEAKER_PIN, low_notes);
 onenote high_notes[] = {{NOTE_C6, 2}, {0, 8}};
 MelodyPlayer high(SPEAKER_PIN, high_notes);
+onenote youwin_notes[] = {{0, 4}, {NOTE_C5, 4}, {NOTE_C5, 8}, {NOTE_C5, 8}, {NOTE_C5, 4},
+                          {NOTE_E5, 4}, {NOTE_C5, 4}, {NOTE_E5, 4}, {NOTE_G5, 2}};
+MelodyPlayer youwin(SPEAKER_PIN, youwin_notes);
+onenote youlose_notes[] = {{0, 4}, {NOTE_C3, 2}, {NOTE_C3, 4}, {NOTE_C3, 4}, {NOTE_C3, 2},
+                           {NOTE_DS3, 4}, {NOTE_D3, 4}, {NOTE_D3, 4}, {NOTE_C3, 4}, {NOTE_C3, 4}, {NOTE_B2, 4}, {NOTE_C3, 2}};
+MelodyPlayer youlose(SPEAKER_PIN, youlose_notes);
 
 // Functions:
+
+/**
+ * clearAll clears all LEDs.
+ */
+ void clearAll() {
+  for (int i=0; i<BUTTON_COUNT; i++) {
+    trellis.clrLED(i);
+  }
+  trellis.writeDisplay();
+ }
 
 /**
  * initNextGame handles STATE_INIT. Initialize for the next game.
@@ -73,16 +98,17 @@ MelodyPlayer high(SPEAKER_PIN, high_notes);
  */
 void initNextGame() {
   // Ensure all the LEDs are out
-  for (int i=0; i<BUTTON_COUNT; i++) {
-    trellis.clrLED(i);
-  }
-  trellis.writeDisplay();
+  clearAll();
 
   // Reset sounds
   success.Pause();
   success.FromTheTop();
   miss.Pause();
   miss.FromTheTop();
+  youwin.Pause();
+  youwin.FromTheTop();
+  youlose.Pause();
+  youlose.FromTheTop();
 
   // No LED is set.
   id = NOT_SET;
@@ -97,6 +123,7 @@ void initNextGame() {
 
   // Tell the game player to get ready.
   readyState = RDY_LT_1;
+  resultsState = DISP_INIT;
   state = STATE_GET_READY;
 }
 
@@ -107,6 +134,11 @@ void initNextGame() {
 void getReady() {
   switch (readyState) {
     case RDY_LT_1:
+      trellis.setLED(12);
+      trellis.setLED(13);
+      trellis.setLED(14);
+      trellis.setLED(15);
+      trellis.writeDisplay();
       low.FromTheTop();
       low.Play();
       readyState = RDY_1;
@@ -118,6 +150,11 @@ void getReady() {
       }
       break;
     case RDY_LT_2:
+      trellis.setLED(8);
+      trellis.setLED(9);
+      trellis.setLED(10);
+      trellis.setLED(11);
+      trellis.writeDisplay();
       low.FromTheTop();
       low.Play();
       readyState = RDY_2;
@@ -129,6 +166,11 @@ void getReady() {
       }
       break;
     case RDY_LT_3:
+      trellis.setLED(4);
+      trellis.setLED(5);
+      trellis.setLED(6);
+      trellis.setLED(7);
+      trellis.writeDisplay();
       low.FromTheTop();
       low.Play();
       readyState = RDY_3;
@@ -140,6 +182,11 @@ void getReady() {
       }
       break;
     case RDY_LT_4:
+      trellis.setLED(0);
+      trellis.setLED(1);
+      trellis.setLED(2);
+      trellis.setLED(3);
+      trellis.writeDisplay();
       high.FromTheTop();
       high.Play();
       readyState = RDY_4;
@@ -147,12 +194,14 @@ void getReady() {
     case RDY_4:
       high.Update();
       if (!high.IsPlaying()) {
+        clearAll();
         readyState = RDY_LT_1;
         state = STATE_PLAY;
       }
       break;
   }
 }
+
 
 /**
  * playGame handles STATE_PLAY. Handle game play events.
@@ -222,11 +271,43 @@ void playGame() {
  * showResults handles STATE_RESULTS. Display the score when the game is over.
  */
 void showResults() {
-  // Wait for a button push to move on to the next game.
-  if (trellis.readSwitches()) {
-    delay(200);
-    trellis.readSwitches();
-    state = STATE_INIT;
+  switch (resultsState) {
+  case DISP_INIT:
+    clearAll();
+    if (pointsFor > pointsAgainst) {
+      youwin.Play();
+    } else {
+      youlose.Play();
+    }
+    resultsState = DISP_SHOW;
+    break;
+
+  case DISP_SHOW:
+    if (pointsFor > pointsAgainst) {
+      youwin.Update();
+      if (!youwin.IsPlaying()) {
+        resultsState = DISP_WAIT;
+      }
+    } else {
+      youlose.Update();
+      if (!youlose.IsPlaying()) {
+        resultsState = DISP_WAIT;
+      }
+    }
+    break;
+
+  case DISP_WAIT:
+    // Wait for a button push to move on to the next game.
+//    if (trellis.readSwitches()) {
+//      for (int i=0; i<BUTTON_COUNT; i++) {
+//        if (trellis.justPressed(i))
+//          {
+            state = STATE_INIT;
+//          }
+//        }
+//      trellis.readSwitches();
+//    }
+    break;
   }
 }
 
@@ -257,7 +338,6 @@ void setup() {
 void loop() {
   switch (state) {
     case STATE_INIT:
-      Serial.println("call initNextGame()");
       initNextGame();
       break;
 
@@ -270,7 +350,6 @@ void loop() {
       break;
 
     case STATE_RESULTS:
-      Serial.println("call showResults()");
       showResults();
       break;
   }
