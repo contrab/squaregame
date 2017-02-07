@@ -5,7 +5,6 @@
 #include <Wire.h>
 #include <Adafruit_Trellis.h>
 #include <MelodyPlayer.h>
-#include "pitches.h"
 
 // Pin Assignments:
 #define SPEAKER_PIN 8
@@ -130,6 +129,9 @@ void initNextGame() {
 
 /**
  * getRead handles STATE_GET_READY. Show the user a countdown to game start.
+ * 
+ * TODO: This could stand to be cleaned up: Repeated code put in a new function; magic 
+ * numbers at least replaced with #define, etc.
  */
 void getReady() {
   switch (readyState) {
@@ -205,16 +207,24 @@ void getReady() {
 
 /**
  * playGame handles STATE_PLAY. Handle game play events.
+ * 
+ * TODO: Break this into functions. Time limit the game. Make there be a hard game 
+ * that is sneakier.
  */
 void playGame() {
   delay(20);
 
   if (chooseNext) {
+    // Time is up for the previous lit-up LED. Choose a new one.
     short newId = NOT_SET;
+
     // Assign an LED to illuminate. Ensure that it's not the same as the last one.
     do {
       // Purposefully do more than there are buttons. Want there to be a decent chance
-      // that no LED is turned on, to make it a little less predictable.
+      // that no LED is turned on, to make it a little less predictable. Numbers higher
+      // than BUTTON_COUNT won't be reported as button pushes, so if no LED is illuminated
+      // and a button is pushed, it will be correctly scored as a miss. Integer arithmetic
+      // with the 1.5 factor is "close enough".
       newId = random(BUTTON_COUNT * 1.5);
     } while (newId == id);
     id = newId;
@@ -226,11 +236,14 @@ void playGame() {
     }
     startTime = millis();
   } else {
+    // Still on the currently lit-up LED. Is its time up?
     if (millis() >= (startTime + duration)) {
+      // Yes. Next loop-around, choose a new LED to light up.
       trellis.clrLED(id);
       trellis.writeDisplay();
       chooseNext = true;
     } else {
+      // The currently lit-up LED's time is not up. See if a button was pushed.
       // readSwitches returns true when a button is pushed or when a button is released.
       if (trellis.readSwitches()) {
         // A button was pressed. Which one?
@@ -240,12 +253,13 @@ void playGame() {
           success.Play();
           pointsFor++;
         } else {
-          // Possibly a "just released" event, which we must ignore. So check all buttons
-          // to see if they were pressed. If so, deduct a point. Otherwise, ignore this
-          // event.
+          // Possibly a "just released" event, which we must ignore. So check all other
+          // buttons to see if they were pressed. If so, deduct a point. Otherwise, ignore
+          // this event.
           for (int i=0; i<BUTTON_COUNT; i++) {
             if (trellis.justPressed(i))
               {
+                // Bad button pushed. Point deducted:
                 Serial.print("-");
                 miss.Play();
                 pointsAgainst++;
@@ -269,6 +283,8 @@ void playGame() {
 
 /**
  * showResults handles STATE_RESULTS. Display the score when the game is over.
+ * 
+ * TODO: make it display the score and wait for a button push.
  */
 void showResults() {
   switch (resultsState) {
