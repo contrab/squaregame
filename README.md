@@ -9,5 +9,8 @@ Still a work in progress, but as of 2/4/17 the game is playable and a reasonable
 
 My first "real" Arduino program that actually does something interactive. Still feeling out what this thing is capable of... Lots of fun!
 
+Project URL:
+http://www.jaszek.org/projects/squaregame/
+
 --Thad Jaszek
-2/7/2017
+2/11/2017
