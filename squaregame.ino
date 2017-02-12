@@ -7,15 +7,22 @@
 #include <MelodyPlayer.h>
 
 // Pin Assignments:
-#define SPEAKER_PIN 8
-#define TREL_INT_PIN 2
+#define DIFFICULTY_SELECT_PIN  3
+#define SPEAKER_PIN            8
+#define LEFT_LED_RED          13
+#define LEFT_LED_BLUE         12
+#define LEFT_LED_YELLOW       11
+#define LEFT_LED_GREEN        10
+#define RIGHT_LED_RED          9
+#define RIGHT_LED_BLUE         6
+#define RIGHT_LED_YELLOW       5
+#define RIGHT_LED_GREEN        4
 
 // Parameters etc.
-#define BUTTON_COUNT 16
-#define NOT_SET -1
-#define EASY_DURATION 650
-#define MEDIUM_DURATION 550
-#define HARD_DURATION 400
+#define BUTTON_COUNT    16
+#define NOT_SET         -1
+#define EASY_DURATION  620
+#define HARD_DURATION  390
 
 // State Machine:
 enum programState {
@@ -113,8 +120,12 @@ void initNextGame() {
   id = NOT_SET;
   chooseNext = true;
 
-  // TODO get input from user how hard/easy to make the game.
-  duration = EASY_DURATION;
+  // Get input from user how hard/easy to make the game.
+  if (HIGH == digitalRead(DIFFICULTY_SELECT_PIN)) {
+    duration = HARD_DURATION;
+  } else {
+    duration = EASY_DURATION;
+  }
 
   // Reset the score.
   pointsFor = 0;
@@ -336,9 +347,8 @@ void setup() {
   Serial.begin(9600);
   randomSeed(analogRead(0));
 
-  // INT pin requires a pullup
-  pinMode(TREL_INT_PIN, INPUT);
-  digitalWrite(TREL_INT_PIN, HIGH);
+  // easy/hard selector
+  pinMode(DIFFICULTY_SELECT_PIN, INPUT_PULLUP);
 
   // i2c address for Trellis
   trellis.begin(0x70);
