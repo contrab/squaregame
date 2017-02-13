@@ -54,11 +54,148 @@ enum displayResultsState {
 };
 enum displayResultsState resultsState;
 
+/**
+ * Color definitions for the Sparkle class.
+ */
+enum LedColor {
+  RED = 1,
+  ORANGE,
+  YELLOW,
+  GREEN,
+  BLUE,
+  PURPLE,
+  WHITE
+};
+
+/**
+ * LED definitions for the Sparkle class.
+ */
+typedef struct _ledDef {
+  unsigned short pin;
+  enum LedColor ledColor;
+  bool commonCathode;
+  bool isOn;
+} ledDef;
+
+
+/**
+ * The Sparkle class manages LEDs that are assigned to it. Enables more complex behaviors,
+ * especially in groups.
+ */
+class Sparkle {
+  private:
+  ledDef *leds;
+  unsigned short count;
+
+  /**
+   * Turn off an LED. Pay attention to whether it is common cathode or anode.
+   */
+  void turnOff(ledDef *led) {
+    if (led == NULL) {
+      return;
+    }
+    digitalWrite(led->pin,
+        (led->commonCathode?LOW:HIGH));
+    led->isOn = false;
+  }
+
+
+  /**
+   * Turn on an LED. Pay attention to whether it is common cathode or anode.
+   */
+  void turnOn(ledDef *led) {
+    if (led == NULL) {
+      return;
+    }
+    digitalWrite(led->pin,
+        (led->commonCathode?HIGH:LOW));
+    led->isOn = true;
+  }
+
+
+  public:
+  /**
+   * Constructor.
+   * ledList is a list of ledDef LEDs defined for the class to control.
+   */
+  template <size_t ledCount>
+  Sparkle(ledDef (&ledList)[ledCount])  {
+    leds = ledList;
+    count = sizeof(ledList) / sizeof(ledDef);
+  }
+
+  /**
+   * Used to set the list of LEDs to manage to digital output.
+   */
+  void initPins() {
+    for (unsigned short i=0; i<count; i++) {
+      pinMode(leds[i].pin, OUTPUT);
+      leds[i].isOn = false;
+    }
+  }
+
+
+  /**
+   * Turn off all managed LEDs.
+   */
+  void allOff() {
+    for (unsigned short i=0; i<count; i++) {
+      turnOff(&(leds[i]));
+    }
+  }
+
+
+  /**
+   * Turn on all managed LEDs.
+   */
+  void allOn() {
+    for (unsigned short i=0; i<count; i++) {
+      turnOn(&(leds[i]));
+    }
+  }
+
+  /**
+   * Turn on all LEDs of a particular color.
+   * color to turn on.
+   */
+   void turnOnAllColor(enum LedColor color) {
+    for (unsigned short i=0; i<count; i++) {
+      if (leds[i].ledColor == color) {
+        turnOn(&(leds[i]));
+      }
+    }
+   }
+
+
+  /**
+   * Turn off all LEDs of a particular color.
+   * color to turn off.
+   */
+   void turnOffAllColor(enum LedColor color) {
+    for (unsigned short i=0; i<count; i++) {
+      if (leds[i].ledColor == color) {
+        turnOff(&(leds[i]));
+      }
+    }
+   }
+
+};
+
 
 // Globals:
 
+ledDef ledList[] = {{LEFT_LED_RED,     RED,    true},
+                    {LEFT_LED_BLUE,    BLUE,   true},
+                    {LEFT_LED_YELLOW,  YELLOW, true},
+                    {LEFT_LED_GREEN,   GREEN,  true},
+                    {RIGHT_LED_RED,    RED,    true},
+                    {RIGHT_LED_BLUE,   BLUE,   true},
+                    {RIGHT_LED_YELLOW, YELLOW, true},
+                    {RIGHT_LED_GREEN,  GREEN,  true}};
+
 Adafruit_Trellis matrix = Adafruit_Trellis();
 Adafruit_TrellisSet trellis =  Adafruit_TrellisSet(&matrix);
+Sparkle sparkle = Sparkle(ledList);
 
 short id = NOT_SET;
 bool chooseNext = true;
@@ -99,8 +236,6 @@ MelodyPlayer youlose(SPEAKER_PIN, youlose_notes);
 
 /**
  * initNextGame handles STATE_INIT. Initialize for the next game.
- * 
- * TODO: Get input from user on difficulty level. For now, just set to EASY.
  */
 void initNextGame() {
   // Ensure all the LEDs are out
@@ -152,6 +287,7 @@ void getReady() {
       trellis.setLED(14);
       trellis.setLED(15);
       trellis.writeDisplay();
+      sparkle.turnOnAllColor(RED);
       low.FromTheTop();
       low.Play();
       readyState = RDY_1;
@@ -159,6 +295,7 @@ void getReady() {
     case RDY_1:
       low.Update();
       if (!low.IsPlaying()) {
+        sparkle.allOff();
         readyState = RDY_LT_2;
       }
       break;
@@ -168,6 +305,7 @@ void getReady() {
       trellis.setLED(10);
       trellis.setLED(11);
       trellis.writeDisplay();
+      sparkle.turnOnAllColor(YELLOW);
       low.FromTheTop();
       low.Play();
       readyState = RDY_2;
@@ -175,6 +313,7 @@ void getReady() {
     case RDY_2:
       low.Update();
       if (!low.IsPlaying()) {
+        sparkle.allOff();
         readyState = RDY_LT_3;
       }
       break;
@@ -184,6 +323,7 @@ void getReady() {
       trellis.setLED(6);
       trellis.setLED(7);
       trellis.writeDisplay();
+      sparkle.turnOnAllColor(BLUE);
       low.FromTheTop();
       low.Play();
       readyState = RDY_3;
@@ -191,6 +331,7 @@ void getReady() {
     case RDY_3:
       low.Update();
       if (!low.IsPlaying()) {
+        sparkle.allOff();
         readyState = RDY_LT_4;
       }
       break;
@@ -200,6 +341,7 @@ void getReady() {
       trellis.setLED(2);
       trellis.setLED(3);
       trellis.writeDisplay();
+      sparkle.turnOnAllColor(GREEN);
       high.FromTheTop();
       high.Play();
       readyState = RDY_4;
@@ -207,6 +349,7 @@ void getReady() {
     case RDY_4:
       high.Update();
       if (!high.IsPlaying()) {
+        sparkle.allOff();
         clearAll();
         readyState = RDY_LT_1;
         state = STATE_PLAY;
@@ -303,8 +446,10 @@ void showResults() {
     clearAll();
     if (pointsFor > pointsAgainst) {
       youwin.Play();
+      sparkle.turnOnAllColor(GREEN);
     } else {
       youlose.Play();
+      sparkle.turnOnAllColor(RED);
     }
     resultsState = DISP_SHOW;
     break;
@@ -329,6 +474,7 @@ void showResults() {
 //      for (int i=0; i<BUTTON_COUNT; i++) {
 //        if (trellis.justPressed(i))
 //          {
+            sparkle.allOff();
             state = STATE_INIT;
 //          }
 //        }
@@ -352,6 +498,8 @@ void setup() {
 
   // i2c address for Trellis
   trellis.begin(0x70);
+
+  sparkle.initPins();
 
   // Get ready to play a game
   state = STATE_INIT;
