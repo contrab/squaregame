@@ -58,7 +58,8 @@ enum displayResultsState resultsState;
  * Color definitions for the Sparkle class.
  */
 enum LedColor {
-  RED = 1,
+  ANY = 0,
+  RED,
   ORANGE,
   YELLOW,
   GREEN,
@@ -68,14 +69,65 @@ enum LedColor {
 };
 
 /**
- * LED definitions for the Sparkle class.
+ * LED class. Used by the Sparkle class.
  */
-typedef struct _ledDef {
+class LedDef {
+  private:
   unsigned short pin;
-  enum LedColor ledColor;
+  enum LedColor color;
   bool commonCathode;
-  bool isOn;
-} ledDef;
+  bool ledIsOn;
+
+  public:
+  /**
+   * Constructor. Provide which pin, color, and whether the LED is switched using
+   * common cathode or common anode, so that the logic works correctly.
+   */
+  LedDef(unsigned short ledPin, enum LedColor ledColor, bool ledCommonCathode) {
+    pin = ledPin;
+    color = ledColor;
+    commonCathode = ledCommonCathode;
+  }
+
+  /**
+   * Initialize the pins, etc.
+   */
+  void initPin() {
+    pinMode(pin, OUTPUT);
+    turnOff();
+  }
+
+  /**
+   * Turn off the LED. Pay attention to whether it is common cathode or anode.
+   */
+  void turnOff() {
+    digitalWrite(pin, (commonCathode?LOW:HIGH));
+    ledIsOn = false;
+  }
+
+
+  /**
+   * Turn on the LED. Pay attention to whether it is common cathode or anode.
+   */
+  void turnOn() {
+    digitalWrite(pin, (commonCathode?HIGH:LOW));
+    ledIsOn = true;
+  }
+
+  /**
+   * Get the color.
+   */
+  enum LedColor getColor() {
+    return color;
+  }
+
+  /**
+   * Return whether the LED is on or not.
+   */
+  bool isOn() {
+    return ledIsOn;
+  }
+};
 
 
 /**
@@ -84,34 +136,8 @@ typedef struct _ledDef {
  */
 class Sparkle {
   private:
-  ledDef *leds;
+  LedDef *leds;
   unsigned short count;
-
-  /**
-   * Turn off an LED. Pay attention to whether it is common cathode or anode.
-   */
-  void turnOff(ledDef *led) {
-    if (led == NULL) {
-      return;
-    }
-    digitalWrite(led->pin,
-        (led->commonCathode?LOW:HIGH));
-    led->isOn = false;
-  }
-
-
-  /**
-   * Turn on an LED. Pay attention to whether it is common cathode or anode.
-   */
-  void turnOn(ledDef *led) {
-    if (led == NULL) {
-      return;
-    }
-    digitalWrite(led->pin,
-        (led->commonCathode?HIGH:LOW));
-    led->isOn = true;
-  }
-
 
   public:
   /**
@@ -119,9 +145,9 @@ class Sparkle {
    * ledList is a list of ledDef LEDs defined for the class to control.
    */
   template <size_t ledCount>
-  Sparkle(ledDef (&ledList)[ledCount])  {
+  Sparkle(LedDef (&ledList)[ledCount])  {
     leds = ledList;
-    count = sizeof(ledList) / sizeof(ledDef);
+    count = sizeof(ledList) / sizeof(LedDef);
   }
 
   /**
@@ -129,28 +155,25 @@ class Sparkle {
    */
   void initPins() {
     for (unsigned short i=0; i<count; i++) {
-      pinMode(leds[i].pin, OUTPUT);
-      leds[i].isOn = false;
+      leds[i].initPin();
     }
   }
-
 
   /**
    * Turn off all managed LEDs.
    */
   void allOff() {
     for (unsigned short i=0; i<count; i++) {
-      turnOff(&(leds[i]));
+      leds[i].turnOff();
     }
   }
-
 
   /**
    * Turn on all managed LEDs.
    */
   void allOn() {
     for (unsigned short i=0; i<count; i++) {
-      turnOn(&(leds[i]));
+      leds[i].turnOn();
     }
   }
 
@@ -160,12 +183,11 @@ class Sparkle {
    */
    void turnOnAllColor(enum LedColor color) {
     for (unsigned short i=0; i<count; i++) {
-      if (leds[i].ledColor == color) {
-        turnOn(&(leds[i]));
+      if (leds[i].getColor() == color) {
+        leds[i].turnOn();
       }
     }
    }
-
 
   /**
    * Turn off all LEDs of a particular color.
@@ -173,8 +195,8 @@ class Sparkle {
    */
    void turnOffAllColor(enum LedColor color) {
     for (unsigned short i=0; i<count; i++) {
-      if (leds[i].ledColor == color) {
-        turnOff(&(leds[i]));
+      if (leds[i].getColor() == color) {
+        leds[i].turnOff();
       }
     }
    }
@@ -183,15 +205,14 @@ class Sparkle {
 
 
 // Globals:
-
-ledDef ledList[] = {{LEFT_LED_RED,     RED,    true},
-                    {LEFT_LED_BLUE,    BLUE,   true},
-                    {LEFT_LED_YELLOW,  YELLOW, true},
-                    {LEFT_LED_GREEN,   GREEN,  true},
-                    {RIGHT_LED_RED,    RED,    true},
-                    {RIGHT_LED_BLUE,   BLUE,   true},
-                    {RIGHT_LED_YELLOW, YELLOW, true},
-                    {RIGHT_LED_GREEN,  GREEN,  true}};
+LedDef ledList[] = {LedDef(LEFT_LED_RED,     RED,    true),
+                    LedDef(LEFT_LED_BLUE,    BLUE,   true),
+                    LedDef(LEFT_LED_YELLOW,  YELLOW, true),
+                    LedDef(LEFT_LED_GREEN,   GREEN,  true),
+                    LedDef(RIGHT_LED_RED,    RED,    true),
+                    LedDef(RIGHT_LED_BLUE,   BLUE,   true),
+                    LedDef(RIGHT_LED_YELLOW, YELLOW, true),
+                    LedDef(RIGHT_LED_GREEN,  GREEN,  true)};
 
 Adafruit_Trellis matrix = Adafruit_Trellis();
 Adafruit_TrellisSet trellis =  Adafruit_TrellisSet(&matrix);
