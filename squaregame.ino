@@ -57,14 +57,14 @@ enum displayResultsState resultsState;
 
 
 // Globals:
-LedDef ledList[] = {LedDef(LEFT_LED_RED,     RED,    true),
-                    LedDef(LEFT_LED_BLUE,    BLUE,   true),
-                    LedDef(LEFT_LED_YELLOW,  YELLOW, true),
-                    LedDef(LEFT_LED_GREEN,   GREEN,  true),
-                    LedDef(RIGHT_LED_RED,    RED,    true),
-                    LedDef(RIGHT_LED_BLUE,   BLUE,   true),
-                    LedDef(RIGHT_LED_YELLOW, YELLOW, true),
-                    LedDef(RIGHT_LED_GREEN,  GREEN,  true)};
+LedDef ledList[] = {LedDef(LEFT_LED_RED,     RED,    true, false),
+                    LedDef(LEFT_LED_BLUE,    BLUE,   true, false),
+                    LedDef(LEFT_LED_YELLOW,  YELLOW, true, true),
+                    LedDef(LEFT_LED_GREEN,   GREEN,  true, true),
+                    LedDef(RIGHT_LED_RED,    RED,    true, true),
+                    LedDef(RIGHT_LED_BLUE,   BLUE,   true, true),
+                    LedDef(RIGHT_LED_YELLOW, YELLOW, true, true),
+                    LedDef(RIGHT_LED_GREEN,  GREEN,  true, false)};
 
 Adafruit_Trellis matrix = Adafruit_Trellis();
 Adafruit_TrellisSet trellis =  Adafruit_TrellisSet(&matrix);
