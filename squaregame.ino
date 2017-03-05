@@ -22,8 +22,8 @@
 // Parameters etc.
 #define BUTTON_COUNT    16
 #define NOT_SET         -1
-#define EASY_DURATION  620
-#define HARD_DURATION  390
+#define EASY_DURATION  700
+#define HARD_DURATION  400
 
 // State Machine:
 enum programState {
@@ -319,7 +319,7 @@ void showResults() {
     clearAll();
     if (pointsFor > pointsAgainst) {
       youwin.Play();
-      sparkle.turnOnAllColor(GREEN);
+      sparkle.turnOnRandomly();
     } else {
       youlose.Play();
       sparkle.turnOnAllColor(RED);
@@ -373,6 +373,7 @@ void setup() {
   trellis.begin(0x70);
 
   sparkle.initPins();
+  sparkle.setRandomly(50, 250, 100, 250);
 
   // Get ready to play a game
   state = STATE_INIT;
@@ -402,5 +403,6 @@ void loop() {
   }
   success.Update();
   miss.Update();
+  sparkle.update();
 }
 
